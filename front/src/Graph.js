@@ -1,22 +1,22 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as d3 from 'd3';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
+import format from 'date-fns/format';
 
 const Graph = () => {
     const svgRef = useRef();
-    const [dateFrom, setDateFrom] = useState('2022-01-01T00:01');
-    const [dateTo, setDateTo] = useState('2022-12-31T00:01');
-    const [showConsumption, setShowConsumption] = useState(false); // New state for consumption toggle
+    const [startDate, setStartDate] = useState(new Date('2022-01-01 00:01'));
+    const [endDate, setEndDate] = useState(new Date('2022-12-31 00:01'));
+    const [showConsumption, setShowConsumption] = useState(false);
 
     useEffect(() => {
-        const formatDate = (dateStr) => {
-            const b = dateStr.split(/\D/);
-            return `${b[0]}.${b[1]}.${b[2]} ${b[3]}:${b[4]}:00`;
-        };
+        const formatDate = (date) => format(date, 'yyyy-MM-dd HH:mm');
 
         const url = new URL('http://localhost:8080/coordinates');
-        url.searchParams.append('dateFrom', formatDate(dateFrom));
-        url.searchParams.append('dateTo', formatDate(dateTo));
-        url.searchParams.append('consumptionIsShown', showConsumption); // Use state variable here
+        url.searchParams.append('dateFrom', formatDate(startDate));
+        url.searchParams.append('dateTo', formatDate(endDate));
+        url.searchParams.append('consumptionIsShown', showConsumption);
 
         fetch(url)
             .then(response => response.json())
@@ -100,23 +100,31 @@ const Graph = () => {
                     .call(yAxisRight);
             })
             .catch(error => console.log(error));
-    }, [dateFrom, dateTo,showConsumption]);
+    }, [startDate, endDate, showConsumption]);
 
     return (
         <div>
-            <div style={{marginBottom: '10px'}}>
+            <div style={{ marginBottom: '10px' }}>
                 <label>
                     Start Date:
-                    <input type="datetime-local" value={dateFrom}
-                           onChange={(e) => setDateFrom(e.target.value)}
-                           style={{marginLeft: '16px', marginBottom: '10px'}}/>
+                    <DatePicker
+                        selected={startDate}
+                        onChange={(date) => setStartDate(date)}
+                        dateFormat="yyyy-MM-dd HH:mm"
+                        showTimeSelect
+                        timeFormat="HH:mm"
+                    />
                 </label>
                 <br/>
                 <label>
                     End Date:
-                    <input type="datetime-local" value={dateTo}
-                           onChange={(e) => setDateTo(e.target.value)}
-                           style={{marginLeft: '20px'}}/>
+                    <DatePicker
+                        selected={endDate}
+                        onChange={(date) => setEndDate(date)}
+                        dateFormat="yyyy-MM-dd HH:mm"
+                        showTimeSelect
+                        timeFormat="HH:mm"
+                    />
                 </label>
                 <br/>
                 <label>
@@ -127,7 +135,7 @@ const Graph = () => {
                            style={{marginLeft: '10px'}}/>
                 </label>
             </div>
-            <div style={{display: 'flex', justifyContent: 'center'}}>
+            <div style={{ display: 'flex', justifyContent: 'center' }}>
                 <svg ref={svgRef}/>
             </div>
         </div>
