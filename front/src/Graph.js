@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import * as d3 from 'd3';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
-import format from 'date-fns/format';
+import { format } from 'date-fns';
 
 const Graph = () => {
     const svgRef = useRef();
@@ -27,74 +27,55 @@ const Graph = () => {
                     d.steamCapacity = +d.steamCapacity;
                 });
 
-                // Set the dimensions for the graph
                 const margin = { top: 20, right: 80, bottom: 30, left: 50 },
-                    width = window.innerWidth - margin.left - margin.right - 100, // Leave some space on the sides
-                    height = window.innerHeight - margin.top - margin.bottom - 100; // Leave some space on top and bottom
+                    width = window.innerWidth - margin.left - margin.right - 100,
+                    height = window.innerHeight - margin.top - margin.bottom - 100;
 
                 const x = d3.scaleTime()
                     .domain(d3.extent(data, d => d.time))
                     .range([0, width]);
 
+                // Custom scale for Y-axis
                 const yBurnersNum = d3.scaleLinear()
-                    .domain([0, 6])
-                    .range([height, 0])
-                    .nice();
+                    .domain([0, 3, 5.5, 6])
+                    .range([height, height, height * 0.1, 0]);
 
                 const ySteamCapacity = d3.scaleLinear()
                     .domain(d3.extent(data, d => d.steamCapacity))
                     .range([height, 0])
                     .nice();
 
-                const xAxis = d3.axisBottom(x),
-                    yAxisLeft = d3.axisLeft(yBurnersNum).tickValues([0, 4, 5, 6]),
-                    yAxisRight = d3.axisRight(ySteamCapacity);
+                const xAxis = d3.axisBottom(x);
+                const yAxisLeft = d3.axisLeft(yBurnersNum)
+                    .tickValues([0, 4, 5, 6])
+                    .tickFormat(d3.format('d'));
+                const yAxisRight = d3.axisRight(ySteamCapacity);
 
-                const lineBurnersNum = d3.line()
-                    .x(d => x(d.time))
-                    .y(d => yBurnersNum(d.burnersNum));
-
-                const lineSteamCapacity = d3.line()
-                    .x(d => x(d.time))
-                    .y(d => ySteamCapacity(d.steamCapacity));
-
-                // Clear the previous SVG contents
                 d3.select(svgRef.current).selectAll('*').remove();
 
-                // Create the SVG container
                 const svg = d3.select(svgRef.current)
                     .attr('width', width + margin.left + margin.right)
                     .attr('height', height + margin.top + margin.bottom)
                     .append('g')
                     .attr('transform', `translate(${margin.left}, ${margin.top})`);
 
-                // Add the paths for the lines
                 svg.append('path')
                     .datum(data)
                     .attr('class', 'line')
                     .attr('fill', 'none')
                     .attr('stroke', 'steelblue')
                     .attr('stroke-width', 1.5)
-                    .attr('d', lineBurnersNum);
+                    .attr('d', d3.line()
+                        .x(d => x(d.time))
+                        .y(d => yBurnersNum(d.burnersNum)));
 
-                svg.append('path')
-                    .datum(data)
-                    .attr('class', 'line')
-                    .attr('fill', 'none')
-                    .attr('stroke', 'red')
-                    .attr('stroke-width', 1.5)
-                    .attr('d', lineSteamCapacity);
-
-                // Add the X Axis
                 svg.append('g')
                     .attr('transform', `translate(0, ${height})`)
                     .call(xAxis);
 
-                // Add the Y Axis on the left
                 svg.append('g')
                     .call(yAxisLeft);
 
-                // Add the Y Axis on the right
                 svg.append('g')
                     .attr('transform', `translate(${width}, 0)`)
                     .call(yAxisRight);
