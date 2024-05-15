@@ -21,7 +21,7 @@ import java.util.List;
 @RestController
 public class DataController {
     private final DataService dataService;
-    public static final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy.MM.dd HH:mm:ss");
+    public static final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
     @Autowired
     public DataController(DataService dataService) {
@@ -33,11 +33,10 @@ public class DataController {
     public List<Coordinate> getData(
             @RequestParam(required = false) String dateFrom,
             @RequestParam(required = false) String dateTo,
-            @RequestParam Boolean consumptionIsShown) {
+            @RequestParam Boolean showCapacity) {
         LocalDateTime from = LocalDateTime.parse(dateFrom, formatter);
         LocalDateTime to = LocalDateTime.parse(dateTo, formatter);
-
-        List<Coordinate> coordinates = dataService.getData(from, to, consumptionIsShown);
+        List<Coordinate> coordinates = dataService.getData(from, to, showCapacity);
         return coordinates;
     }
 

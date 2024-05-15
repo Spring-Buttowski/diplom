@@ -29,7 +29,7 @@ public class BurnerNumberDetermination {
     }
 
 
-    public List<Coordinate> getBurnersAmountByClusterization(List<Data> dataList, boolean additional) {
+    public static List<Coordinate> getBurnersAmountByClusterization(List<Data> dataList, boolean showCapacity) {
         List<Coordinate> coordinates = new ArrayList<>();
         double minDistance = Double.MAX_VALUE;
         double currentDistance;
@@ -42,9 +42,6 @@ public class BurnerNumberDetermination {
 
         //Проходим по всем значениям
         for (Data data : dataList) {
-//            if (data.getTime().toString().equals("2022-03-08T00:09")) {
-//                System.out.println();
-//            }
             //Данные с котлоагрегата могут быть сняты неправильно.
             //Если произошёл большой скачок в паропроизводительности, то в этот момент времеи занчения были сняты неправлиьно.
             //Присваиваем кол-во горелок равному на прошлой итерации
@@ -61,15 +58,12 @@ public class BurnerNumberDetermination {
                     for (int burnersNumByTable : keySet) {
                         array = idealParameters.get(burnersNumByTable);
                         for (int i = 0; i < array[0].length; i++) {
-//                            currentDistance = Math.sqrt(Math.pow(data.getMasutPresure() - array[0][i], 2)
-//                                    + Math.pow(data.getMasutConsumtion() - array[1][i], 2)
-//                                    + Math.pow(data.getSteamCapacity() - array[2][i], 2));
-//                            currentDistance = Math.sqrt(Math.pow((100 - 100 * data.getMasutPresure() / array[0][i]), 2)
-//                                    + Math.pow((100 - 100 * data.getMasutConsumtion() / array[1][i]), 2)
-//                                    + Math.pow(100 - 100 * data.getSteamCapacity() / array[2][i], 2));
-                            currentDistance = Math.abs(100 - 100 * data.getMasutPresure() / array[0][i]) +
-                                    Math.abs(100 - 100 * data.getMasutConsumtion() / array[1][i]) +
-                                    Math.abs(100 - 100 * data.getSteamCapacity() / array[2][i]);
+                            currentDistance = Math.sqrt(Math.pow(data.getMasutPresure() - array[0][i], 2)
+                                    + Math.pow(data.getMasutConsumtion() - array[1][i], 2)
+                                    + Math.pow(data.getSteamCapacity() - array[2][i], 2));
+//                            currentDistance = Math.abs(100 - 100 * data.getMasutPresure() / array[0][i]) +
+//                                    Math.abs(100 - 100 * data.getMasutConsumtion() / array[1][i]) +
+//                                    Math.abs(100 - 100 * data.getSteamCapacity() / array[2][i]);
                             if (currentDistance < minDistance) {
                                 minDistance = currentDistance;
                                 burnersNum = burnersNumByTable;
@@ -84,7 +78,9 @@ public class BurnerNumberDetermination {
             coordinates.add(Coordinate.builder()
                     .time(data.getTime())
                     .burnersNum(burnersNum)
-                    .steamCapacity(additional ? data.getSteamCapacity() : null
+                    .steamCapacity(showCapacity ? data.getSteamCapacity() : null)
+                    .masutPresure(showCapacity ? data.getMasutPresure() : null)
+                    .masutConsumption(showCapacity ? data.getMasutConsumtion() : null
 //                    .steamCapacity(data.getSteamCapacity()
 //                    .steamCapacity(data.getSteamCapacity()
                     ).build());
