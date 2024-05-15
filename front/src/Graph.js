@@ -8,7 +8,7 @@ const Graph = () => {
     const svgRef = useRef();
     const [startDate, setStartDate] = useState(new Date('2022-01-01 00:01'));
     const [endDate, setEndDate] = useState(new Date('2022-12-31 00:01'));
-    const [showConsumption, setShowConsumption] = useState(false);
+    const [showCapacity, setShowCapacity] = useState(false);
 
     useEffect(() => {
         const formatDate = (date) => format(date, 'yyyy-MM-dd HH:mm');
@@ -16,7 +16,7 @@ const Graph = () => {
         const url = new URL('http://localhost:8080/coordinates');
         url.searchParams.append('dateFrom', formatDate(startDate));
         url.searchParams.append('dateTo', formatDate(endDate));
-        url.searchParams.append('consumptionIsShown', showConsumption);
+        url.searchParams.append('showCapacity', showCapacity);
 
         fetch(url)
             .then(response => response.json())
@@ -35,10 +35,9 @@ const Graph = () => {
                     .domain(d3.extent(data, d => d.time))
                     .range([0, width]);
 
-                // Custom scale for Y-axis
                 const yBurnersNum = d3.scaleLinear()
-                    .domain([0, 3, 5.5, 6])
-                    .range([height, height, height * 0.1, 0]);
+                    .domain([0, 6])
+                    .range([height, 0]);
 
                 const ySteamCapacity = d3.scaleLinear()
                     .domain(d3.extent(data, d => d.steamCapacity))
@@ -59,35 +58,94 @@ const Graph = () => {
                     .append('g')
                     .attr('transform', `translate(${margin.left}, ${margin.top})`);
 
-                svg.append('path')
+                // Define the clipping path
+                svg.append('defs').append('clipPath')
+                    .attr('id', 'clip')
+                    .append('rect')
+                    .attr('width', width)
+                    .attr('height', height);
+
+                // Group for the line paths
+                const lineGroup = svg.append('g')
+                    .attr('clip-path', 'url(#clip)');
+
+                lineGroup.append('path')
                     .datum(data)
-                    .attr('class', 'line')
+                    .attr('class', 'line blue')
                     .attr('fill', 'none')
                     .attr('stroke', 'steelblue')
-                    .attr('stroke-width', 1.5)
+                    .attr('stroke-width', 2.5)
                     .attr('d', d3.line()
                         .x(d => x(d.time))
                         .y(d => yBurnersNum(d.burnersNum)));
 
+                if (showCapacity) {
+                    lineGroup.append('path')
+                        .datum(data)
+                        .attr('class', 'line red')
+                        .attr('fill', 'none')
+                        .attr('stroke', 'red')
+                        .attr('stroke-width', 2.5)
+                        .attr('d', d3.line()
+                            .x(d => x(d.time))
+                            .y(d => ySteamCapacity(d.steamCapacity)));
+                }
+
                 svg.append('g')
+                    .attr('class', 'x-axis')
                     .attr('transform', `translate(0, ${height})`)
                     .call(xAxis);
 
                 svg.append('g')
+                    .attr('class', 'y-axis-left')
                     .call(yAxisLeft);
 
                 svg.append('g')
+                    .attr('class', 'y-axis-right')
                     .attr('transform', `translate(${width}, 0)`)
                     .call(yAxisRight);
+
+                const zoom = d3.zoom()
+                    .scaleExtent([0.5, 20])
+                    .translateExtent([[0, 0], [width, height]])
+                    .extent([[0, 0], [width, height]])
+                    .on('zoom', zoomed);
+
+                svg.append('rect')
+                    .attr('width', width)
+                    .attr('height', height)
+                    .style('fill', 'none')
+                    .style('pointer-events', 'all')
+                    .attr('transform', `translate(${margin.left}, ${margin.top})`)
+                    .call(zoom);
+
+                function zoomed(event) {
+                    const transform = event.transform;
+                    const newX = transform.rescaleX(x);
+
+                    lineGroup.selectAll('.line.blue')
+                        .attr('d', d3.line()
+                            .x(d => newX(d.time))
+                            .y(d => yBurnersNum(d.burnersNum)));
+
+                    if (showCapacity) {
+                        lineGroup.selectAll('.line.red')
+                            .attr('d', d3.line()
+                                .x(d => newX(d.time))
+                                .y(d => ySteamCapacity(d.steamCapacity)));
+                    }
+
+                    svg.select('.x-axis').call(d3.axisBottom(newX));
+                }
             })
             .catch(error => console.log(error));
-    }, [startDate, endDate, showConsumption]);
+    }, [startDate, endDate, showCapacity]);
 
     return (
         <div>
-            <div style={{ marginBottom: '10px' }}>
+            <div style={{ marginBottom: '10px' , marginLeft:'50px'}}>
                 <label>
-                    Start Date:
+                    От:
                     <DatePicker
                         selected={startDate}
                         onChange={(date) => setStartDate(date)}
@@ -96,9 +154,9 @@ const Graph = () => {
                         timeFormat="HH:mm"
                     />
                 </label>
-                <br/>
+                <br />
                 <label>
-                    End Date:
+                    До:
                     <DatePicker
                         selected={endDate}
                         onChange={(date) => setEndDate(date)}
@@ -107,17 +165,17 @@ const Graph = () => {
                         timeFormat="HH:mm"
                     />
                 </label>
-                <br/>
+                <br />
                 <label>
-                    Show Consumption:
+                    Отобразить паропроизводительность:
                     <input type="checkbox"
-                           checked={showConsumption}
-                           onChange={(e) => setShowConsumption(e.target.checked)}
-                           style={{marginLeft: '10px'}}/>
+                           checked={showCapacity}
+                           onChange={(e) => setShowCapacity(e.target.checked)}
+                           style={{ marginLeft: '10px' }} />
                 </label>
             </div>
             <div style={{ display: 'flex', justifyContent: 'center' }}>
-                <svg ref={svgRef}/>
+                <svg ref={svgRef} />
             </div>
         </div>
     );
