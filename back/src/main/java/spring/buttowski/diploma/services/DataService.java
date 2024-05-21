@@ -1,8 +1,13 @@
 package spring.buttowski.diploma.services;
 
+import jakarta.transaction.Transactional;
+import lombok.extern.slf4j.Slf4j;
 import spring.buttowski.diploma.controllers.DataController;
+import spring.buttowski.diploma.models.BoilerHouse;
 import spring.buttowski.diploma.models.Coordinate;
 import spring.buttowski.diploma.models.Data;
+import spring.buttowski.diploma.repositories.BoilerHouseRepository;
+import spring.buttowski.diploma.repositories.CoordinateRepository;
 import spring.buttowski.diploma.repositories.DataRepository;
 import spring.buttowski.diploma.util.BurnerNumberDetermination;
 import spring.buttowski.diploma.util.XlsToProductListParser;
@@ -17,34 +22,31 @@ import java.util.Iterator;
 import java.util.List;
 
 @Service
+@Slf4j
 public class DataService {
     private final DataRepository dataRepository;
     private final BurnerNumberDetermination burnerNumberDetermination;
     private final XlsToProductListParser productListParser;
+    private final BoilerHouseRepository boilerHouseRepository;
+    private final CoordinateRepository coordinateRepository;
 
     @Autowired
-    public DataService(DataRepository dataRepository, BurnerNumberDetermination burnerNumberDetermination, XlsToProductListParser productListParser) {
+    public DataService(DataRepository dataRepository, BurnerNumberDetermination burnerNumberDetermination, XlsToProductListParser productListParser, BoilerHouseRepository boilerHouseRepository, CoordinateRepository coordinateRepository) {
         this.dataRepository = dataRepository;
         this.burnerNumberDetermination = burnerNumberDetermination;
         this.productListParser = productListParser;
+        this.boilerHouseRepository = boilerHouseRepository;
+        this.coordinateRepository = coordinateRepository;
     }
 
-    public List<Coordinate> getData(LocalDateTime dateFrom, LocalDateTime dateTo, boolean showCapacity) {
+    public List<Coordinate> getData(LocalDateTime dateFrom, LocalDateTime dateTo, String boilerHouseName) {
+        BoilerHouse boilerHouse = boilerHouseRepository.findByName(boilerHouseName).get();
+        //Находим все нужные нам значения параметров работы за определённый промежуток времени
+        List<Coordinate> coordinates = coordinateRepository.findDataByTimeBetweenAndBoilerHouse(dateFrom, dateTo, boilerHouse);
         if (dateFrom.equals(dateTo)) {
             return Collections.emptyList();
         }
-        //Находим все нужные нам значения параметров работы за определённый промежуток времени
-        List<Data> dataList = dataRepository.findDataByTimeBetween(dateFrom, dateTo);
-
-        //"Сглаживаем" данные методом кользящего среднего
-        movingAverage(dataList, 100);
-
-        //Считаем кол-во включенных горелок для каждого момента времени
-        List<Coordinate> coordinates = BurnerNumberDetermination.getBurnersAmountByClusterization(dataList, showCapacity);
-
-        //Печатаем все промежутки времени
         countGaps(coordinates);
-
         return coordinates;
     }
 
@@ -70,7 +72,7 @@ public class DataService {
                     + " " + gapStart.getBurnersNum() + " " + alarm);
         }
         System.out.println("-------------(Implicit gaps' amount - " + implicitGapsCounter + ")");
-//        System.out.println(implicitGapsCounter);
+//        System.out.printlnеу(implicitGapsCounter);
     }
 
     //TODO Можно оптимизировать путём использования суммы с прошлой итерации
@@ -99,9 +101,34 @@ public class DataService {
         }
     }
 
-    public void saveFileData(MultipartFile file) {
+    public void saveBoilerHouse(MultipartFile file, String boilerHouseName) {
         IOUtils.setByteArrayMaxOverride(Integer.MAX_VALUE);
-        List<Data> dataList = productListParser.getProducts(file);
+        BoilerHouse boilerHouse = boilerHouseRepository.save(BoilerHouse
+                .builder()
+                .name(boilerHouseName)
+                .build());
+
+        log.info("Saving data");
+        List<Data> dataList = productListParser.getProducts(file, boilerHouse);
         dataRepository.saveAll(dataList);
+
+        log.info("Evaluating coordinates");
+        //"Сглаживаем" данные методом кользящего среднего
+        movingAverage(dataList, 100);
+
+        //Считаем кол-во включенных горелок для каждого момента времени
+        List<Coordinate> coordinates = BurnerNumberDetermination.getBurnersAmountByClusterization(dataList, boilerHouse);
+
+        log.info("Saving coordinates");
+        coordinateRepository.saveAll(coordinates);
+    }
+
+    public List<BoilerHouse> getBoilerHouses() {
+        return boilerHouseRepository.findAll().stream().filter(boilerHouse -> !boilerHouse.getData().isEmpty()).toList();
+    }
+
+    @Transactional
+    public void deleteBoilerHouse(String name) {
+        boilerHouseRepository.deleteByName(name);
     }
 }

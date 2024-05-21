@@ -3,6 +3,8 @@ package spring.buttowski.diploma.models;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 
 import java.time.LocalDateTime;
 
@@ -13,10 +15,9 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@JsonInclude(JsonInclude.Include.NON_NULL)
 public class Data {
     @Id
-    @Column(name = "time")
+    @Column(name = "time", columnDefinition = "timestamp(0)")
     private LocalDateTime time;
 
     @Column(name = "masut_pressure")
@@ -27,4 +28,9 @@ public class Data {
 
     @Column(name = "steam_capacity")
     private double steamCapacity;
+
+    @ManyToOne
+    @JoinColumn(name = "boiler_house_id", referencedColumnName = "id")
+    @OnDelete(action = OnDeleteAction.CASCADE)
+    private BoilerHouse boilerHouse;
 }

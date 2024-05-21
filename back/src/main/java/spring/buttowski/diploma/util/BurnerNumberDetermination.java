@@ -1,5 +1,6 @@
 package spring.buttowski.diploma.util;
 
+import spring.buttowski.diploma.models.BoilerHouse;
 import spring.buttowski.diploma.models.Coordinate;
 import spring.buttowski.diploma.models.Data;
 import org.springframework.stereotype.Component;
@@ -29,7 +30,7 @@ public class BurnerNumberDetermination {
     }
 
 
-    public static List<Coordinate> getBurnersAmountByClusterization(List<Data> dataList, boolean showCapacity) {
+    public static List<Coordinate> getBurnersAmountByClusterization(List<Data> dataList, BoilerHouse boilerHouse) {
         List<Coordinate> coordinates = new ArrayList<>();
         double minDistance = Double.MAX_VALUE;
         double currentDistance;
@@ -78,12 +79,11 @@ public class BurnerNumberDetermination {
             coordinates.add(Coordinate.builder()
                     .time(data.getTime())
                     .burnersNum(burnersNum)
-                    .steamCapacity(showCapacity ? data.getSteamCapacity() : null)
-                    .masutPresure(showCapacity ? data.getMasutPresure() : null)
-                    .masutConsumption(showCapacity ? data.getMasutConsumtion() : null
-//                    .steamCapacity(data.getSteamCapacity()
-//                    .steamCapacity(data.getSteamCapacity()
-                    ).build());
+                    .steamCapacity( data.getSteamCapacity())
+                    .boilerHouse(boilerHouse)
+//                    .masutPresure(showCapacity ? data.getMasutPresure() : null)
+//                    .masutConsumption(showCapacity ? data.getMasutConsumtion() : null
+                    .build());
         }
 
         return coordinates;
