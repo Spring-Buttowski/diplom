@@ -26,67 +26,11 @@ import java.util.*;
 
 @Component
 public class XlsToProductListParser {
-
-    public List<Data> getProducts(MultipartFile multipartFile, BoilerHouse boilerHouse) {
-
-//            return parseToProducts(getData(multipartFile));
-        return parseCSVToProducts(multipartFile, boilerHouse);
-
-    }
-
-    private static final SimpleDateFormat OUTPUT_DATE_FORMAT = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss");
     public static final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy H:mm");
     public static final DateTimeFormatter dateformatter = DateTimeFormatter.ofPattern("dd.MM.yyyy");
+    private static final NumberFormat format = NumberFormat.getInstance(Locale.FRANCE);
 
-    private static Map<Integer, List<String>> getData(MultipartFile multipartFile) throws IOException, ParseException {
-        Map<Integer, List<String>> data = new HashMap<>();
-
-        try (InputStream inputStream = multipartFile.getInputStream()) {
-            Workbook workbook = new XSSFWorkbook(inputStream);
-            Sheet sheet = workbook.getSheetAt(0);
-
-            Iterator<Row> rowIterator = sheet.rowIterator();
-
-            rowIterator.next();
-            rowIterator.next();
-            rowIterator.next();
-
-            while (rowIterator.hasNext()) {
-                Row row = rowIterator.next();
-                List<String> rowData = new ArrayList<>();
-                for (Cell cell : row) {
-                    if (cell.getCellType() == CellType.NUMERIC && DateUtil.isCellDateFormatted(cell)) {
-                        Date date = cell.getDateCellValue();
-                        String formattedDate = OUTPUT_DATE_FORMAT.format(date);
-                        rowData.add(formattedDate);
-                    } else {
-                        rowData.add(cell.toString());
-                    }
-                }
-                data.put(row.getRowNum(), rowData);
-            }
-            workbook.close();
-        }
-        return data;
-    }
-
-    private static List<Data> parseToProducts(Map<Integer, List<String>> data) {
-        List<Data> result = new ArrayList<>();
-        for (List<String> dataList : data.values()) {
-            if (dataList.size() >= 4) {
-                result.add(Data.builder()
-                        .time(LocalDateTime.parse(dataList.get(0), formatter))
-                        .masutPresure(parseDouble(dataList.get(1)))
-                        .masutConsumtion(parseDouble(dataList.get(2)))
-                        .steamCapacity(parseDouble(dataList.get(3)))
-                        .build());
-            }
-        }
-        return result;
-    }
-
-    private static List<Data> parseCSVToProducts(MultipartFile file, BoilerHouse boilerHouse) {
-        String csvFile = "D:\\Polytech\\4 grade\\Диплом\\diplom\\full-stack-app\\back\\src\\main\\resources\\7 котёл 2 стоба.csv";
+    public List<Data> parseCSVToProducts(MultipartFile file, BoilerHouse boilerHouse) {
         List<Data> dataList = new ArrayList<>();
         try (CSVReader reader = new CSVReaderBuilder(new InputStreamReader(file.getInputStream()))
                 .withCSVParser(new CSVParserBuilder().withSeparator(';').build())
@@ -119,8 +63,6 @@ public class XlsToProductListParser {
         }
         return dataList;
     }
-
-    private static final NumberFormat format = NumberFormat.getInstance(Locale.FRANCE);
 
     public static Double parseDouble(String value) {
         try {

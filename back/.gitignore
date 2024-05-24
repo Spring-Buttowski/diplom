@@ -3,3 +3,9 @@
 /target/
 /src/main/resources/application-dev.properties
 /src/main/resources/data.arff
+/src/main/resources/7 котёл.csv
+/src/main/resources/7 котёл.json
+/src/main/resources/7 котёл.xlsx
+/src/main/resources/9 котёл.csv
+/src/main/resources/9 котёл.json
+/src/main/resources/9 котёл январь.csv

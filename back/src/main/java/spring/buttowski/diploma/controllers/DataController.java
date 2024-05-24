@@ -1,5 +1,7 @@
 package spring.buttowski.diploma.controllers;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
@@ -14,9 +16,11 @@ import spring.buttowski.diploma.models.BoilerHouse;
 import spring.buttowski.diploma.models.Coordinate;
 import spring.buttowski.diploma.services.DataService;
 
+import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Map;
 
 
 @RestController
@@ -57,8 +61,10 @@ public class DataController {
 
     @PostMapping("/create-boiler-house")
     @CrossOrigin(origins = "*", allowedHeaders = "*")
-    public ResponseEntity<?> createBoilerHouse(@RequestParam("file") MultipartFile file, @RequestParam(name = "name") String boilerHouseName) {
-        dataService.saveBoilerHouse(file, boilerHouseName);
+    public ResponseEntity<?> createBoilerHouse(@RequestParam("file") MultipartFile file,
+                                               @RequestParam(name = "name") String boilerHouseName,
+                                               @RequestParam("idealParameters") String idealParametersJson) {
+        dataService.saveBoilerHouse(file, boilerHouseName, idealParametersJson);
         return ResponseEntity.ok("Boiler house has been saved");
     }
 
