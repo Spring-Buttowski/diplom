@@ -15,6 +15,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Table(name = "boiler_house")
@@ -31,6 +32,12 @@ public class BoilerHouse {
 
     @Column(unique = true)
     private String name;
+
+    @Column(columnDefinition = "timestamp(0)")
+    private LocalDateTime maxDate;
+
+    @Column(columnDefinition = "timestamp(0)")
+    private LocalDateTime minDate;
 
     @OneToMany(mappedBy = "boilerHouse", cascade = CascadeType.REMOVE)
     @JsonIgnore

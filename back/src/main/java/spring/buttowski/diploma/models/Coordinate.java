@@ -1,10 +1,13 @@
 package spring.buttowski.diploma.models;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
@@ -30,6 +33,10 @@ import java.time.LocalDateTime;
 public class Coordinate {
     //    @JsonFormat(pattern = "yyyy-MM-dd HH:mm")
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @JsonIgnore
+    private int id;
+
     @Column(columnDefinition = "timestamp(0)")
     private LocalDateTime time;
     private int burnersNum;
