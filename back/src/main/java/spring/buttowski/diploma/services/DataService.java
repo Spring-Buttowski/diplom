@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import spring.buttowski.diploma.controllers.DataController;
 import spring.buttowski.diploma.models.BoilerHouse;
 import spring.buttowski.diploma.models.Coordinate;
 import spring.buttowski.diploma.models.Data;
@@ -40,6 +41,10 @@ public class DataService {
     private final BoilerHouseRepository boilerHouseRepository;
     private final CoordinateRepository coordinateRepository;
 
+    private static final int MAXIMUM_ZERO_GAP = 60;
+    private static final double NEAR_ZERO = 0.0001;
+    private static final int IMPLICIT_GAP_MAXIMUM = 120;
+
     @Autowired
     public DataService(DataRepository dataRepository, XlsToProductListParser productListParser, BoilerHouseRepository boilerHouseRepository, CoordinateRepository coordinateRepository) {
         this.dataRepository = dataRepository;
@@ -59,8 +64,8 @@ public class DataService {
         return coordinates;
     }
 
-    public static void countGaps(List<Coordinate> coordinates) {
-//        System.out.println("-------------");
+    public static int countGaps(List<Coordinate> coordinates) {
+        System.out.println("-------------");
         Iterator<Coordinate> iterator = coordinates.iterator();
         Coordinate gapStart, next;
         int timeCounter;
@@ -72,16 +77,17 @@ public class DataService {
                 timeCounter++;
             }
             String alarm = "";
-            if (timeCounter < 60) {
+            if (timeCounter < IMPLICIT_GAP_MAXIMUM) {
                 implicitGapsCounter++;
                 alarm = " <60 минут!";
             }
-//            System.out.println(gapStart.getTime().format(DataController.formatter) +
-//                    " - " + next.getTime().minusMinutes(1).format(DataController.formatter)
-//                    + " " + gapStart.getBurnersNum() + " " + alarm);
+            System.out.println(gapStart.getTime().format(DataController.formatter) +
+                    " - " + next.getTime().minusMinutes(1).format(DataController.formatter)
+                    + " " + gapStart.getBurnersNum() + " " + alarm);
         }
-//        System.out.println("-------------(Implicit gaps' amount - " + implicitGapsCounter + ")");
-        System.out.print(implicitGapsCounter + "\n");
+        System.out.println("-------------(Implicit gaps' amount - " + implicitGapsCounter + ")");
+//        System.out.print(implicitGapsCounter + "\n");
+        return implicitGapsCounter;
     }
 
     //TODO Можно оптимизировать путём использования суммы с прошлой итерации
@@ -109,9 +115,6 @@ public class DataService {
             sumMasutPresure = 0.0;
         }
     }
-
-    private static final int MAXIMUM_ZERO_GAP = 60;
-    private static final double NEAR_ZERO = 0.0001;
 
     public static <T> void interpolateZerosAndNull(List<T> data, Function<T, Double> getter, BiConsumer<T, Double> setter) {
         int n = data.size();
@@ -185,15 +188,19 @@ public class DataService {
         interpolateZerosAndNull(dataList, Data::getMasutPresure, Data::setMasutPresure);
 
         //"Сглаживаем" данные методом кользящего среднего
-        movingAverage(dataList, 10);
+        movingAverage(dataList, 100);
 
-//        log.info("Saving data");
-//        dataRepository.saveAll(dataList);
+        log.info("Saving data");
+        dataRepository.saveAll(dataList);
 
 
-//        approximate(dataList, Data::getTime, Data::getMasutPresure, Data::setMasutPresure);
-//        approximate(dataList, Data::getTime, Data::getMasutConsumtion, Data::setMasutConsumtion);
-//        approximate(dataList, Data::getTime, Data::getSteamCapacity, Data::setSteamCapacity);
+//        int gap = 50;
+//        int degree = 2;
+//        for (int start = 0, end = gap; end < dataList.size(); start += gap, end += gap) {
+//            approximate(dataList.subList(start, end), Data::getTime, Data::getMasutPresure, Data::setMasutPresure, degree);
+//            approximate(dataList.subList(start, end), Data::getTime, Data::getMasutConsumtion, Data::setMasutConsumtion, degree);
+//            approximate(dataList.subList(start, end), Data::getTime, Data::getSteamCapacity, Data::setSteamCapacity, degree);
+//        }
 
         //Считаем кол-во включенных горелок для каждого момента времени
         List<Coordinate> coordinates = getBurnersAmountByClusterization(dataList, boilerHouse, idealParameters);
@@ -260,11 +267,10 @@ public class DataService {
         return coordinates;
     }
 
-    private static <DATA> void approximate(List<DATA> dataList, Function<DATA, LocalDateTime> dataTimeGetter,
-                                           Function<DATA, Double> dataSteamCapacityGetter,
-                                           BiConsumer<DATA, Double> coordinateSetter) {
+    public static <DATA> void approximate(List<DATA> dataList, Function<DATA, LocalDateTime> dataTimeGetter,
+                                          Function<DATA, Double> dataSteamCapacityGetter,
+                                          BiConsumer<DATA, Double> coordinateSetter, int degree) {
         // Perform polynomial regression
-        int degree = 5; // Change this to the desired polynomial degree
         PolynomialCurveFitter fitter = PolynomialCurveFitter.create(degree);
         WeightedObservedPoints points = new WeightedObservedPoints();
 
@@ -278,9 +284,9 @@ public class DataService {
         double[] coefficients = fitter.fit(points.toList());
 
         // Output the polynomial coefficients
-        for (int i = 0; i < coefficients.length; i++) {
-            System.out.println("Coefficient of x^" + i + ": " + coefficients[i]);
-        }
+//        for (int i = 0; i < coefficients.length; i++) {
+//            System.out.println("Coefficient of x^" + i + ": " + coefficients[i]);
+//        }
 
         for (DATA data : dataList) {
             double y = 0.0;
