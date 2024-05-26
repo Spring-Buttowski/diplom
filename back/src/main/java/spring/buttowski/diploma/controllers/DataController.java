@@ -1,7 +1,5 @@
 package spring.buttowski.diploma.controllers;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
@@ -14,23 +12,21 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import spring.buttowski.diploma.models.BoilerHouse;
 import spring.buttowski.diploma.models.Coordinate;
-import spring.buttowski.diploma.services.DataService;
+import spring.buttowski.diploma.services.Service;
 
-import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.Map;
 
 
 @RestController
 public class DataController {
-    private final DataService dataService;
+    private final Service service;
     public static final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
     @Autowired
-    public DataController(DataService dataService) {
-        this.dataService = dataService;
+    public DataController(Service service) {
+        this.service = service;
     }
 
     @GetMapping("/coordinates-by-boiler-house")
@@ -41,21 +37,21 @@ public class DataController {
             @RequestParam(name = "name") String boilerHouseName) {
         LocalDateTime from = LocalDateTime.parse(dateFrom, formatter);
         LocalDateTime to = LocalDateTime.parse(dateTo, formatter);
-        List<Coordinate> coordinates = dataService.getData(from, to, boilerHouseName);
+        List<Coordinate> coordinates = service.getData(from, to, boilerHouseName);
         return coordinates;
     }
 
     @GetMapping("/boiler-houses")
     @CrossOrigin(origins = "*", allowedHeaders = "*")
     public ResponseEntity<?> getBoilerHouses() {
-        List<BoilerHouse> list = dataService.getBoilerHouses();
+        List<BoilerHouse> list = service.getBoilerHouses();
         return ResponseEntity.ok(list);
     }
 
     @DeleteMapping("/boiler-houses/{name}")
     @CrossOrigin(origins = "*", allowedHeaders = "*")
     public ResponseEntity<?> deleteBoilerHouse(@PathVariable String name) {
-        dataService.deleteBoilerHouse(name);
+        service.deleteBoilerHouse(name);
         return ResponseEntity.ok("Boiler house has been deleted.");
     }
 
@@ -64,7 +60,7 @@ public class DataController {
     public ResponseEntity<?> createBoilerHouse(@RequestParam("file") MultipartFile file,
                                                @RequestParam(name = "name") String boilerHouseName,
                                                @RequestParam("idealParameters") String idealParametersJson) {
-        dataService.saveBoilerHouse(file, boilerHouseName, idealParametersJson);
+        service.saveBoilerHouse(file, boilerHouseName, idealParametersJson);
         return ResponseEntity.ok("Boiler house has been saved");
     }
 

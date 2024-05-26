@@ -41,7 +41,7 @@ public class BoilerHouse {
 
     @OneToMany(mappedBy = "boilerHouse", cascade = CascadeType.REMOVE)
     @JsonIgnore
-    private List<Data> data;
+    private List<RawData> data;
 
     @OneToMany(mappedBy = "boilerHouse", cascade = CascadeType.REMOVE)
     @JsonIgnore

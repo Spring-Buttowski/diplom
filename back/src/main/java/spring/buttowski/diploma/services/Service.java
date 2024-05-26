@@ -9,12 +9,11 @@ import org.apache.commons.math3.fitting.WeightedObservedPoints;
 import org.apache.poi.util.IOUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Sort;
-import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import spring.buttowski.diploma.controllers.DataController;
 import spring.buttowski.diploma.models.BoilerHouse;
 import spring.buttowski.diploma.models.Coordinate;
-import spring.buttowski.diploma.models.Data;
+import spring.buttowski.diploma.models.RawData;
 import spring.buttowski.diploma.repositories.BoilerHouseRepository;
 import spring.buttowski.diploma.repositories.CoordinateRepository;
 import spring.buttowski.diploma.repositories.DataRepository;
@@ -29,13 +28,12 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 
-@Service
+@org.springframework.stereotype.Service
 @Slf4j
-public class DataService {
+public class Service {
     private final DataRepository dataRepository;
     private final XlsToProductListParser productListParser;
     private final BoilerHouseRepository boilerHouseRepository;
@@ -46,7 +44,7 @@ public class DataService {
     private static final int IMPLICIT_GAP_MAXIMUM = 120;
 
     @Autowired
-    public DataService(DataRepository dataRepository, XlsToProductListParser productListParser, BoilerHouseRepository boilerHouseRepository, CoordinateRepository coordinateRepository) {
+    public Service(DataRepository dataRepository, XlsToProductListParser productListParser, BoilerHouseRepository boilerHouseRepository, CoordinateRepository coordinateRepository) {
         this.dataRepository = dataRepository;
         this.productListParser = productListParser;
         this.boilerHouseRepository = boilerHouseRepository;
@@ -91,25 +89,25 @@ public class DataService {
     }
 
     //TODO Можно оптимизировать путём использования суммы с прошлой итерации
-    public static void movingAverage(List<Data> dataList, int border) {
-        Data[] dataArray = dataList.toArray(new Data[0]);
+    public static void movingAverage(List<RawData> rawDataList, int border) {
+        RawData[] rawDataArray = rawDataList.toArray(new RawData[0]);
         double sumSteamCapacity = 0.0;
         double sumMasutPresure = 0.0;
         double sumMasutConsumption = 0.0;
-        for (int outerIndex = 0; outerIndex < dataList.size(); outerIndex++) {
+        for (int outerIndex = 0; outerIndex < rawDataList.size(); outerIndex++) {
             int from = Math.max(0, outerIndex - border);
-            int to = Math.min(dataList.size() - 1, outerIndex + border);
+            int to = Math.min(rawDataList.size() - 1, outerIndex + border);
             for (int innerIndex = from;
                  innerIndex <= to;
                  innerIndex++) {
-                sumSteamCapacity += dataArray[innerIndex].getSteamCapacity();
-                sumMasutConsumption += dataArray[innerIndex].getMasutConsumtion();
-                sumMasutPresure += dataArray[innerIndex].getMasutPresure();
+                sumSteamCapacity += rawDataArray[innerIndex].getSteamCapacity();
+                sumMasutConsumption += rawDataArray[innerIndex].getFuelOilConsumption();
+                sumMasutPresure += rawDataArray[innerIndex].getFuelOilPressure();
             }
             int quantity = to - from + 1;
-            dataList.get(outerIndex).setSteamCapacity(sumSteamCapacity / quantity);
-            dataList.get(outerIndex).setMasutPresure(sumMasutPresure / quantity);
-            dataList.get(outerIndex).setMasutConsumtion(sumMasutConsumption / quantity);
+            rawDataList.get(outerIndex).setSteamCapacity(sumSteamCapacity / quantity);
+            rawDataList.get(outerIndex).setFuelOilPressure(sumMasutPresure / quantity);
+            rawDataList.get(outerIndex).setFuelOilConsumption(sumMasutConsumption / quantity);
             sumSteamCapacity = 0.0;
             sumMasutConsumption = 0.0;
             sumMasutPresure = 0.0;
@@ -174,36 +172,36 @@ public class DataService {
                 .name(boilerHouseName)
                 .build());
 
-        List<Data> dataList = productListParser.parseCSVToProducts(file, boilerHouse);
+        List<RawData> rawDataList = productListParser.parseCSVToProducts(file, boilerHouse);
 
-        boilerHouse.setMaxDate(dataList.get(dataList.size() - 1).getTime());
-        boilerHouse.setMinDate(dataList.get(0).getTime());
+        boilerHouse.setMaxDate(rawDataList.get(rawDataList.size() - 1).getTime());
+        boilerHouse.setMinDate(rawDataList.get(0).getTime());
 
         boilerHouseRepository.save(boilerHouse);
         log.info("Evaluating coordinates");
 
         //Интерполируем значения где датчики дали сбой
-        interpolateZerosAndNull(dataList, Data::getSteamCapacity, Data::setSteamCapacity);
-        interpolateZerosAndNull(dataList, Data::getMasutConsumtion, Data::setMasutConsumtion);
-        interpolateZerosAndNull(dataList, Data::getMasutPresure, Data::setMasutPresure);
+        interpolateZerosAndNull(rawDataList, RawData::getSteamCapacity, RawData::setSteamCapacity);
+        interpolateZerosAndNull(rawDataList, RawData::getFuelOilConsumption, RawData::setFuelOilConsumption);
+        interpolateZerosAndNull(rawDataList, RawData::getFuelOilPressure, RawData::setFuelOilPressure);
 
         //"Сглаживаем" данные методом кользящего среднего
-        movingAverage(dataList, 100);
+//        movingAverage(rawDataList, 100);
 
         log.info("Saving data");
-        dataRepository.saveAll(dataList);
+        dataRepository.saveAll(rawDataList);
 
 
 //        int gap = 50;
 //        int degree = 2;
-//        for (int start = 0, end = gap; end < dataList.size(); start += gap, end += gap) {
-//            approximate(dataList.subList(start, end), Data::getTime, Data::getMasutPresure, Data::setMasutPresure, degree);
-//            approximate(dataList.subList(start, end), Data::getTime, Data::getMasutConsumtion, Data::setMasutConsumtion, degree);
-//            approximate(dataList.subList(start, end), Data::getTime, Data::getSteamCapacity, Data::setSteamCapacity, degree);
+//        for (int start = 0, end = gap; end < rawDataList.size(); start += gap, end += gap) {
+//            approximate(rawDataList.subList(start, end), RawData::getTime, RawData::getMasutPresure, RawData::setMasutPresure, degree);
+//            approximate(rawDataList.subList(start, end), RawData::getTime, RawData::getMasutConsumtion, RawData::setMasutConsumtion, degree);
+//            approximate(rawDataList.subList(start, end), RawData::getTime, RawData::getSteamCapacity, RawData::setSteamCapacity, degree);
 //        }
 
         //Считаем кол-во включенных горелок для каждого момента времени
-        List<Coordinate> coordinates = getBurnersAmountByClusterization(dataList, boilerHouse, idealParameters);
+        List<Coordinate> coordinates = getBurnersAmountByClusterization(rawDataList, boilerHouse, idealParameters);
         log.info("Saving coordinates");
 
         coordinateRepository.saveAll(coordinates);
@@ -211,7 +209,7 @@ public class DataService {
     }
 
 
-    public static List<Coordinate> getBurnersAmountByClusterization(List<Data> dataList,
+    public static List<Coordinate> getBurnersAmountByClusterization(List<RawData> rawDataList,
                                                                     BoilerHouse boilerHouse,
                                                                     Map<Integer, double[][]> idealParameters) {
         List<Coordinate> coordinates = new ArrayList<>();
@@ -237,24 +235,24 @@ public class DataService {
 
 
         //Проходим по всем значениям
-        for (Data dataPoint : dataList) {
-//            if (dataPoint.getTime().toString().equals("2023-01-02T18:50")) {
+        for (RawData rawDataPoint : rawDataList) {
+//            if (rawDataPoint.getTime().toString().equals("2023-01-02T18:50")) {
 //                System.out.println();
 //            }
 
             //После выполнения это цикла, мы точно можем сказать сколько горелок было включено в текузий момент
             for (int burnersNumByTable : idealParametersNew.keySet()) {
                 double[] array = idealParametersNew.get(burnersNumByTable);
-//                if (array[0][0] <= dataPoint.getSteamCapacity() && dataPoint.getSteamCapacity() <= array[0][array[0].length - 1]) {
+//                if (array[0][0] <= rawDataPoint.getSteamCapacity() && rawDataPoint.getSteamCapacity() <= array[0][array[0].length - 1]) {
 //                    burnersNum = burnersNumByTable;
 //                    break;
 //                } else {
-                currentDistance = Math.sqrt(Math.pow(dataPoint.getMasutPresure() - array[1], 2)
-                        + Math.pow(dataPoint.getMasutConsumtion() - array[2], 2)
-                        + Math.pow(dataPoint.getSteamCapacity() - array[0], 2));
-//                            currentDistance = Math.abs(100 - 100 * dataPoint.getMasutPresure() / array[1][i]) +
-//                                    Math.abs(100 - 100 * dataPoint.getMasutConsumtion() / array[2][i]) +
-//                                    Math.abs(100 - 100 * dataPoint.getSteamCapacity() / array[0][i]);
+                currentDistance = Math.sqrt(Math.pow(rawDataPoint.getFuelOilPressure() - array[1], 2)
+                        + Math.pow(rawDataPoint.getFuelOilConsumption() - array[2], 2)
+                        + Math.pow(rawDataPoint.getSteamCapacity() - array[0], 2));
+//                            currentDistance = Math.abs(100 - 100 * rawDataPoint.getMasutPresure() / array[1][i]) +
+//                                    Math.abs(100 - 100 * rawDataPoint.getMasutConsumtion() / array[2][i]) +
+//                                    Math.abs(100 - 100 * rawDataPoint.getSteamCapacity() / array[0][i]);
                 if (currentDistance < minDistance) {
                     minDistance = currentDistance;
                     burnersNum = burnersNumByTable;
@@ -267,12 +265,12 @@ public class DataService {
 
 
             coordinates.add(Coordinate.builder()
-                    .time(dataPoint.getTime())
+                    .time(rawDataPoint.getTime())
                     .burnersNum(burnersNum)
-                    .steamCapacity(dataPoint.getSteamCapacity())
+                    .steamCapacity(rawDataPoint.getSteamCapacity())
                     .boilerHouse(boilerHouse)
-//                    .masutPresure(showCapacity ? dataPoint.getMasutPresure() : null)
-//                    .masutConsumption(showCapacity ? dataPoint.getMasutConsumtion() : null
+//                    .masutPresure(showCapacity ? rawDataPoint.getMasutPresure() : null)
+//                    .masutConsumption(showCapacity ? rawDataPoint.getMasutConsumtion() : null
                     .build());
         }
         // Add more data points as needed

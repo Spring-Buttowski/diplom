@@ -193,7 +193,7 @@ const MainPage = () => {
                     {isDragActiveData ? (
                         <p>Перетащите файлы сюда ...</p>
                     ) : (
-                        <p>Перетащите файлы сюда или нажмите для выбора файлов</p>
+                        <p>Данные работы котлоагрегата (.csv)</p>
                     )}
                     {selectedDataFile && <p>Выбранный файл: {selectedDataFile.name}</p>}
                 </div>
@@ -202,7 +202,7 @@ const MainPage = () => {
                     {isDragActiveParams ? (
                         <p>Перетащите файлы сюда ...</p>
                     ) : (
-                        <p>Перетащите файлы сюда или нажмите для выбора файлов</p>
+                        <p>Параметры работы котлоагрегата согласно режимной карте (.json)</p>
                     )}
                     {selectedParamsFile && <p>Выбранный файл: {selectedParamsFile.name}</p>}
                 </div>
