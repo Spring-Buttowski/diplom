@@ -218,34 +218,48 @@ public class DataService {
         double minDistance = Double.MAX_VALUE;
         double currentDistance;
         int burnersNum = -1;
-        double[][] array;
-        Set<Integer> keySet;
+
+        Map<Integer, double[]> idealParametersNew = new HashMap<>();
+        for (int key : idealParameters.keySet()) {
+            double[][] array = idealParameters.get(key);
+            double[] arrayNew = new double[3];
+            for (int i = 0; i < array.length; i++) {
+                double[] arr = array[i];
+                double sum = 0;
+                for (double v : arr) {
+                    sum += v;
+                }
+                sum /= arr.length;
+                arrayNew[i] = sum;
+            }
+            idealParametersNew.put(key, arrayNew);
+        }
+
 
         //Проходим по всем значениям
         for (Data dataPoint : dataList) {
 //            if (dataPoint.getTime().toString().equals("2023-01-02T18:50")) {
 //                System.out.println();
 //            }
-            keySet = idealParameters.keySet();
+
             //После выполнения это цикла, мы точно можем сказать сколько горелок было включено в текузий момент
-            for (int burnersNumByTable : keySet) {
-                array = idealParameters.get(burnersNumByTable);
+            for (int burnersNumByTable : idealParametersNew.keySet()) {
+                double[] array = idealParametersNew.get(burnersNumByTable);
 //                if (array[0][0] <= dataPoint.getSteamCapacity() && dataPoint.getSteamCapacity() <= array[0][array[0].length - 1]) {
 //                    burnersNum = burnersNumByTable;
 //                    break;
 //                } else {
-                for (int i = 0; i < array[0].length; i++) {
-                    currentDistance = Math.sqrt(Math.pow(dataPoint.getMasutPresure() - array[1][i], 2)
-                            + Math.pow(dataPoint.getMasutConsumtion() - array[2][i], 2)
-                            + Math.pow(dataPoint.getSteamCapacity() - array[0][i], 2));
+                currentDistance = Math.sqrt(Math.pow(dataPoint.getMasutPresure() - array[1], 2)
+                        + Math.pow(dataPoint.getMasutConsumtion() - array[2], 2)
+                        + Math.pow(dataPoint.getSteamCapacity() - array[0], 2));
 //                            currentDistance = Math.abs(100 - 100 * dataPoint.getMasutPresure() / array[1][i]) +
 //                                    Math.abs(100 - 100 * dataPoint.getMasutConsumtion() / array[2][i]) +
 //                                    Math.abs(100 - 100 * dataPoint.getSteamCapacity() / array[0][i]);
-                    if (currentDistance < minDistance) {
-                        minDistance = currentDistance;
-                        burnersNum = burnersNumByTable;
-                    }
+                if (currentDistance < minDistance) {
+                    minDistance = currentDistance;
+                    burnersNum = burnersNumByTable;
                 }
+
 //                }
             }
 

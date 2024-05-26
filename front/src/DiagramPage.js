@@ -1,20 +1,21 @@
-import React, {useEffect, useRef, useState} from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import * as d3 from 'd3';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
-import {format} from 'date-fns';
-import {useParams} from 'react-router-dom';
+import { format } from 'date-fns';
+import { useParams } from 'react-router-dom';
 
 const DiagramPage = () => {
-    const {boilerHouseName} = useParams(); // Extract boiler house name from URL
+    const { boilerHouseName } = useParams(); // Extract boiler house name from URL
     const svgRef = useRef();
     const [startDate, setStartDate] = useState(null);
     const [endDate, setEndDate] = useState(null);
     const [showCapacity, setShowCapacity] = useState(false);
+    const [showBurners, setShowBurners] = useState(true);
 
     useEffect(() => {
         // Fetch boiler house details to get min and max dates
-        fetch(`http://localhost:8080/boiler-houses`)
+        fetch('http://localhost:8080/boiler-houses')
             .then(response => response.json())
             .then(data => {
                 const boilerHouse = data.find(bh => bh.name === boilerHouseName);
@@ -45,7 +46,7 @@ const DiagramPage = () => {
                     d.steamCapacity = +d.steamCapacity;
                 });
 
-                const margin = {top: 20, right: 80, bottom: 70, left: 50},
+                const margin = { top: 100, right: 80, bottom: 70, left: 50 }, // Increased top margin for legend
                     width = window.innerWidth - margin.left - margin.right - 200, // Reduced width
                     height = window.innerHeight - margin.top - margin.bottom - 200; // Reduced height
 
@@ -89,15 +90,17 @@ const DiagramPage = () => {
                 const lineGroup = svg.append('g')
                     .attr('clip-path', 'url(#clip)');
 
-                lineGroup.append('path')
-                    .datum(data)
-                    .attr('class', 'line blue')
-                    .attr('fill', 'none')
-                    .attr('stroke', 'steelblue')
-                    .attr('stroke-width', 2.5)
-                    .attr('d', d3.line()
-                        .x(d => x(d.time))
-                        .y(d => yBurnersNum(d.burnersNum)));
+                if (showBurners) {
+                    lineGroup.append('path')
+                        .datum(data)
+                        .attr('class', 'line blue')
+                        .attr('fill', 'none')
+                        .attr('stroke', 'steelblue')
+                        .attr('stroke-width', 2.5)
+                        .attr('d', d3.line()
+                            .x(d => x(d.time))
+                            .y(d => yBurnersNum(d.burnersNum)));
+                }
 
                 if (showCapacity) {
                     lineGroup.append('path')
@@ -120,20 +123,106 @@ const DiagramPage = () => {
                     .style("font-size", "14px") // Increase font size
                     .attr("dx", "-.8em")
                     .attr("dy", ".15em")
-                    .attr("transform", "rotate(-35)"); // Rotate labels
+                    .attr("transform", "rotate(-30)"); // Rotate labels
 
-                svg.append('g')
-                    .attr('class', 'y-axis-left')
-                    .call(yAxisLeft)
-                    .selectAll("text")
-                    .style("font-size", "14px"); // Increase font size
+                if (showBurners) {
+                    svg.append('g')
+                        .attr('class', 'y-axis-left')
+                        .call(yAxisLeft)
+                        .selectAll("text")
+                        .style("font-size", "14px"); // Increase font size
+                }
 
-                svg.append('g')
-                    .attr('class', 'y-axis-right')
-                    .attr('transform', `translate(${width}, 0)`)
-                    .call(yAxisRight)
-                    .selectAll("text")
-                    .style("font-size", "14px"); // Increase font size
+                if (showCapacity) {
+                    if (showBurners) {
+                        svg.append('g')
+                            .attr('class', 'y-axis-right')
+                            .attr('transform', `translate(${width}, 0)`)
+                            .call(yAxisRight)
+                            .selectAll("text")
+                            .style("font-size", "14px"); // Increase font size
+                    } else {
+                        svg.append('g')
+                            .attr('class', 'y-axis-left')
+                            .call(yAxisRight
+                                .tickSize(-5) // Make ticks point inward
+                                .tickPadding(1) // Adjust padding for labels
+                            )
+                            .selectAll("text")
+                            .style("font-size", "14px")
+                            .style("text-anchor", "end") // Align text to the end (left)
+                            .attr("dx", "-.8em"); // Move text to the left
+                    }
+                }
+
+                // Add X axis label
+                svg.append("text")
+                    .attr("class", "x-axis-label")
+                    .attr("text-anchor", "middle")
+                    .attr("x", width / 2)
+                    .attr("y", height + margin.bottom - 5)
+                    .text("Время");
+
+                // Add Y left axis label
+                if (showBurners) {
+                    svg.append("text")
+                        .attr("class", "y-axis-left-label")
+                        .attr("text-anchor", "middle")
+                        .attr("transform", `translate(${-margin.left + 20}, ${height / 2}) rotate(-90)`)
+                        .text("Количество включенных горелок");
+                }
+
+                // Add Y right axis label
+                if (showCapacity) {
+                    if (showBurners) {
+                        svg.append("text")
+                            .attr("class", "y-axis-right-label")
+                            .attr("text-anchor", "middle")
+                            .attr("transform", `translate(${width + margin.right - 20}, ${height / 2}) rotate(-90)`)
+                            .text("Паропроизводительность, т/час");
+                    } else {
+                        svg.append("text")
+                            .attr("class", "y-axis-left-label")
+                            .attr("text-anchor", "middle")
+                            .attr("transform", `translate(${-margin.left + 20}, ${height / 2}) rotate(-90)`)
+                            .text("Паропроизводительность, т/час");
+                    }
+                }
+
+                // Add legend
+                const legend = svg.append('g')
+                    .attr('class', 'legend')
+                    .attr('transform', `translate(0, -80)`); // Move legend above the chart
+
+                if (showBurners) {
+                    legend.append('rect')
+                        .attr('x', 0)
+                        .attr('y', 0)
+                        .attr('width', 20)
+                        .attr('height', 20)
+                        .attr('fill', 'steelblue');
+
+                    legend.append('text')
+                        .attr('x', 30)
+                        .attr('y', 15)
+                        .text('Количество включенных горелок')
+                        .style('font-size', '14px');
+                }
+
+                if (showCapacity) {
+                    legend.append('rect')
+                        .attr('x', 0)
+                        .attr('y', showBurners ? 30 : 0) // Adjust position if both legends are shown
+                        .attr('width', 20)
+                        .attr('height', 20)
+                        .attr('fill', 'red');
+
+                    legend.append('text')
+                        .attr('x', 30)
+                        .attr('y', showBurners ? 45 : 15) // Adjust position if both legends are shown
+                        .text('Паропроизводительность, т/час')
+                        .style('font-size', '14px');
+                }
 
                 const zoom = d3.zoom()
                     .scaleExtent([0.5, 20])
@@ -153,10 +242,12 @@ const DiagramPage = () => {
                     const transform = event.transform;
                     const newX = transform.rescaleX(x);
 
-                    lineGroup.selectAll('.line.blue')
-                        .attr('d', d3.line()
-                            .x(d => newX(d.time))
-                            .y(d => yBurnersNum(d.burnersNum)));
+                    if (showBurners) {
+                        lineGroup.selectAll('.line.blue')
+                            .attr('d', d3.line()
+                                .x(d => newX(d.time))
+                                .y(d => yBurnersNum(d.burnersNum)));
+                    }
 
                     if (showCapacity) {
                         lineGroup.selectAll('.line.red')
@@ -169,43 +260,87 @@ const DiagramPage = () => {
                 }
             })
             .catch(error => console.log(error));
-    }, [startDate, endDate, showCapacity, boilerHouseName]);
+    }, [startDate, endDate, showCapacity, showBurners, boilerHouseName]);
+
+    const downloadImage = () => {
+        const svgElement = svgRef.current;
+        const svgString = new XMLSerializer().serializeToString(svgElement);
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        const DOMURL = window.URL || window.webkitURL || window;
+
+        const img = new Image();
+        const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+        const url = DOMURL.createObjectURL(svgBlob);
+
+        img.onload = () => {
+            canvas.width = svgElement.clientWidth;
+            canvas.height = svgElement.clientHeight;
+            ctx.drawImage(img, 0, 0);
+            DOMURL.revokeObjectURL(url);
+
+            const imgURI = canvas
+                .toDataURL('image/png')
+                .replace('image/png', 'image/octet-stream');
+
+            const a = document.createElement('a');
+            a.setAttribute('download', 'diagram.png');
+            a.setAttribute('href', imgURI);
+            a.setAttribute('target', '_blank');
+            a.click();
+        };
+
+        img.src = url;
+    };
 
     return (
         <div>
-            <div style={{marginLeft: '50px', marginTop: '5px'}}>
-                <label>
-                    От:
-                    <DatePicker
-                        selected={startDate}
-                        onChange={(date) => setStartDate(date)}
-                        dateFormat="yyyy-MM-dd HH:mm"
-                        showTimeSelect
-                        timeFormat="HH:mm"
-                    />
-                </label>
-                <br/>
-                <label>
-                    До:
-                    <DatePicker
-                        selected={endDate}
-                        onChange={(date) => setEndDate(date)}
-                        dateFormat="yyyy-MM-dd HH:mm"
-                        showTimeSelect
-                        timeFormat="HH:mm"
-                    />
-                </label>
-                <br/>
-                <label>
-                    Отобразить паропроизводительность:
-                    <input type="checkbox"
-                           checked={showCapacity}
-                           onChange={(e) => setShowCapacity(e.target.checked)}
-                           style={{marginLeft: '10px'}}/>
-                </label>
+            <div style={{ marginLeft: '50px', marginTop: '5px', display: 'flex', alignItems: 'center' }}>
+                <div>
+                    <label>
+                        От:
+                        <DatePicker
+                            selected={startDate}
+                            onChange={(date) => setStartDate(date)}
+                            dateFormat="yyyy-MM-dd HH:mm"
+                            showTimeSelect
+                            timeFormat="HH:mm"
+                        />
+                    </label>
+                    <br />
+                    <label>
+                        До:
+                        <DatePicker
+                            selected={endDate}
+                            onChange={(date) => setEndDate(date)}
+                            dateFormat="yyyy-MM-dd HH:mm"
+                            showTimeSelect
+                            timeFormat="HH:mm"
+                        />
+                    </label>
+                </div>
+                <div style={{ marginLeft: '20px' }}>
+                    <label>
+                        Отобразить количество включенных горелок:
+                        <input type="checkbox"
+                               checked={showBurners}
+                               onChange={(e) => setShowBurners(e.target.checked)}
+                               style={{ marginLeft: '10px' }} />
+                    </label>
+                    <br />
+                    <label>
+                        Отобразить паропроизводительность:
+                        <input type="checkbox"
+                               checked={showCapacity}
+                               onChange={(e) => setShowCapacity(e.target.checked)}
+                               style={{ marginLeft: '10px' }} />
+                    </label>
+                    <br />
+                    <button onClick={downloadImage}>Download as PNG</button>
+                </div>
             </div>
-            <div style={{display: 'flex', justifyContent: 'center'}}>
-                <svg ref={svgRef}/>
+            <div style={{ display: 'flex', justifyContent: 'center' }}>
+                <svg ref={svgRef} />
             </div>
         </div>
     );
