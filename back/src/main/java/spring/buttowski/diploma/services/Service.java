@@ -4,6 +4,8 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.math3.analysis.interpolation.SplineInterpolator;
+import org.apache.commons.math3.analysis.polynomials.PolynomialSplineFunction;
 import org.apache.commons.math3.fitting.PolynomialCurveFitter;
 import org.apache.commons.math3.fitting.WeightedObservedPoints;
 import org.apache.poi.util.IOUtils;
@@ -18,6 +20,7 @@ import spring.buttowski.diploma.repositories.BoilerHouseRepository;
 import spring.buttowski.diploma.repositories.CoordinateRepository;
 import spring.buttowski.diploma.repositories.DataRepository;
 import spring.buttowski.diploma.util.XlsToProductListParser;
+
 
 import java.io.IOException;
 import java.time.LocalDateTime;
@@ -63,7 +66,7 @@ public class Service {
     }
 
     public static int countGaps(List<Coordinate> coordinates) {
-        System.out.println("-------------");
+//        System.out.println("-------------");
         Iterator<Coordinate> iterator = coordinates.iterator();
         Coordinate gapStart, next;
         int timeCounter;
@@ -79,11 +82,11 @@ public class Service {
                 implicitGapsCounter++;
                 alarm = " <60 минут!";
             }
-            System.out.println(gapStart.getTime().format(DataController.formatter) +
-                    " - " + next.getTime().minusMinutes(1).format(DataController.formatter)
-                    + " " + gapStart.getBurnersNum() + " " + alarm);
+//            System.out.println(gapStart.getTime().format(DataController.formatter) +
+//                    " - " + next.getTime().minusMinutes(1).format(DataController.formatter)
+//                    + " " + gapStart.getBurnersNum() + " " + alarm);
         }
-        System.out.println("-------------(Implicit gaps' amount - " + implicitGapsCounter + ")");
+//        System.out.println("-------------(Implicit gaps' amount - " + implicitGapsCounter + ")");
 //        System.out.print(implicitGapsCounter + "\n");
         return implicitGapsCounter;
     }
@@ -191,14 +194,13 @@ public class Service {
         log.info("Saving data");
         dataRepository.saveAll(rawDataList);
 
-
-//        int gap = 50;
-//        int degree = 2;
-//        for (int start = 0, end = gap; end < rawDataList.size(); start += gap, end += gap) {
-//            approximate(rawDataList.subList(start, end), RawData::getTime, RawData::getMasutPresure, RawData::setMasutPresure, degree);
-//            approximate(rawDataList.subList(start, end), RawData::getTime, RawData::getMasutConsumtion, RawData::setMasutConsumtion, degree);
-//            approximate(rawDataList.subList(start, end), RawData::getTime, RawData::getSteamCapacity, RawData::setSteamCapacity, degree);
-//        }
+        int gap = 500;
+        int degree = 4;
+        for (int start = 0, end = gap; end < rawDataList.size(); start += gap, end += gap) {
+            approximate(rawDataList.subList(start, end), RawData::getTime, RawData::getFuelOilPressure, RawData::setFuelOilPressure, degree);
+            approximate(rawDataList.subList(start, end), RawData::getTime, RawData::getFuelOilConsumption, RawData::setFuelOilConsumption, degree);
+            approximate(rawDataList.subList(start, end), RawData::getTime, RawData::getSteamCapacity, RawData::setSteamCapacity, degree);
+        }
 
         //Считаем кол-во включенных горелок для каждого момента времени
         List<Coordinate> coordinates = getBurnersAmountByClusterization(rawDataList, boilerHouse, idealParameters);
@@ -236,46 +238,25 @@ public class Service {
 
         //Проходим по всем значениям
         for (RawData rawDataPoint : rawDataList) {
-//            if (rawDataPoint.getTime().toString().equals("2023-01-02T18:50")) {
-//                System.out.println();
-//            }
-
             //После выполнения это цикла, мы точно можем сказать сколько горелок было включено в текузий момент
             for (int burnersNumByTable : idealParametersNew.keySet()) {
                 double[] array = idealParametersNew.get(burnersNumByTable);
-//                if (array[0][0] <= rawDataPoint.getSteamCapacity() && rawDataPoint.getSteamCapacity() <= array[0][array[0].length - 1]) {
-//                    burnersNum = burnersNumByTable;
-//                    break;
-//                } else {
                 currentDistance = Math.sqrt(Math.pow(rawDataPoint.getFuelOilPressure() - array[1], 2)
                         + Math.pow(rawDataPoint.getFuelOilConsumption() - array[2], 2)
                         + Math.pow(rawDataPoint.getSteamCapacity() - array[0], 2));
-//                            currentDistance = Math.abs(100 - 100 * rawDataPoint.getMasutPresure() / array[1][i]) +
-//                                    Math.abs(100 - 100 * rawDataPoint.getMasutConsumtion() / array[2][i]) +
-//                                    Math.abs(100 - 100 * rawDataPoint.getSteamCapacity() / array[0][i]);
                 if (currentDistance < minDistance) {
                     minDistance = currentDistance;
                     burnersNum = burnersNumByTable;
                 }
-
-//                }
             }
-
             minDistance = Double.MAX_VALUE;
-
-
             coordinates.add(Coordinate.builder()
                     .time(rawDataPoint.getTime())
                     .burnersNum(burnersNum)
                     .steamCapacity(rawDataPoint.getSteamCapacity())
                     .boilerHouse(boilerHouse)
-//                    .masutPresure(showCapacity ? rawDataPoint.getMasutPresure() : null)
-//                    .masutConsumption(showCapacity ? rawDataPoint.getMasutConsumtion() : null
                     .build());
         }
-        // Add more data points as needed
-
-
         return coordinates;
     }
 
@@ -309,7 +290,6 @@ public class Service {
             coordinateSetter.accept(data, y);
         }
     }
-
 
     public List<BoilerHouse> getBoilerHouses() {
         return boilerHouseRepository.findAll();
