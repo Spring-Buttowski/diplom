@@ -114,7 +114,7 @@ public class Service {
         }
     }
 
-    public static <T> void interpolateZerosAndNull(List<T> data, Function<T, Double> getter, BiConsumer<T, Double> setter) {
+    public static <T> void interpolateAtZerosAndNull(List<T> data, Function<T, Double> getter, BiConsumer<T, Double> setter) {
         int n = data.size();
 
         for (int i = 0; i < n; i++) {
@@ -181,9 +181,9 @@ public class Service {
         log.info("Evaluating coordinates");
 
         //Интерполируем значения где датчики дали сбой
-        interpolateZerosAndNull(rawDataList, RawData::getSteamCapacity, RawData::setSteamCapacity);
-        interpolateZerosAndNull(rawDataList, RawData::getFuelOilConsumption, RawData::setFuelOilConsumption);
-        interpolateZerosAndNull(rawDataList, RawData::getFuelOilPressure, RawData::setFuelOilPressure);
+        interpolateAtZerosAndNull(rawDataList, RawData::getSteamCapacity, RawData::setSteamCapacity);
+        interpolateAtZerosAndNull(rawDataList, RawData::getFuelOilConsumption, RawData::setFuelOilConsumption);
+        interpolateAtZerosAndNull(rawDataList, RawData::getFuelOilPressure, RawData::setFuelOilPressure);
 
         //"Сглаживаем" данные методом кользящего среднего
 //        movingAverage(rawDataList, 100);
