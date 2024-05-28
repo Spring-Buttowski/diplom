@@ -46,9 +46,10 @@ const DiagramPage = () => {
                     d.steamCapacity = +d.steamCapacity;
                 });
 
-                const margin = { top: 100, right: 80, bottom: 70, left: 50 }, // Increased top margin for legend
-                    width = window.innerWidth - margin.left - margin.right - 200, // Reduced width
-                    height = window.innerHeight - margin.top - margin.bottom - 200; // Reduced height
+                // Adjusted margins
+                const margin = { top: 100, right: 100, bottom: 100, left: 100 }, // Increased left and right margins
+                    width = window.innerWidth - margin.left - margin.right - 100, // Reduced width
+                    height = window.innerHeight - margin.top - margin.bottom - 150; // Reduced height
 
                 const x = d3.scaleTime()
                     .domain(d3.extent(data, d => d.time))
@@ -67,7 +68,7 @@ const DiagramPage = () => {
                     .tickFormat(d3.timeFormat("%Y-%m-%d")); // Format can be adjusted
 
                 const yAxisLeft = d3.axisLeft(yBurnersNum)
-                    .tickValues([0, 4, 5, 6])
+                    .tickValues([0, 4, 5, 6]) // Only show 0, 4, 5, and 6
                     .tickFormat(d3.format('d'));
                 const yAxisRight = d3.axisRight(ySteamCapacity);
 
@@ -77,7 +78,7 @@ const DiagramPage = () => {
                     .attr('width', width + margin.left + margin.right)
                     .attr('height', height + margin.top + margin.bottom)
                     .append('g')
-                    .attr('transform', `translate(${margin.left}, ${margin.top})`);
+                    .attr('transform', `translate(${margin.left}, ${margin.top})`); // Updated transform
 
                 // Define the clipping path
                 svg.append('defs').append('clipPath')
@@ -120,7 +121,7 @@ const DiagramPage = () => {
                     .call(xAxis)
                     .selectAll("text")
                     .style("text-anchor", "end")
-                    .style("font-size", "18px") // Increase font size
+                    .style("font-size", "22px") // Decrease font size
                     .attr("dx", "-.8em")
                     .attr("dy", ".15em")
                     .attr("transform", "rotate(-30)"); // Rotate labels
@@ -130,17 +131,17 @@ const DiagramPage = () => {
                         .attr('class', 'y-axis-left')
                         .call(yAxisLeft)
                         .selectAll("text")
-                        .style("font-size", "18px"); // Increase font size
+                        .style("font-size", "24px"); // Increase font size
                 }
 
                 if (showCapacity) {
                     if (showBurners) {
                         svg.append('g')
                             .attr('class', 'y-axis-right')
-                            .attr('transform', `translate(${width}, 0)`)
+                            .attr('transform', `translate(${width}, 0)`) // Updated transform
                             .call(yAxisRight)
                             .selectAll("text")
-                            .style("font-size", "18px"); // Increase font size
+                            .style("font-size", "24px"); // Increase font size
                     } else {
                         svg.append('g')
                             .attr('class', 'y-axis-left')
@@ -149,7 +150,7 @@ const DiagramPage = () => {
                                 .tickPadding(1) // Adjust padding for labels
                             )
                             .selectAll("text")
-                            .style("font-size", "18px")
+                            .style("font-size", "24px")
                             .style("text-anchor", "end") // Align text to the end (left)
                             .attr("dx", "-.8em"); // Move text to the left
                     }
@@ -160,8 +161,8 @@ const DiagramPage = () => {
                     .attr("class", "x-axis-label")
                     .attr("text-anchor", "middle")
                     .attr("x", width / 2)
-                    .attr("y", height + margin.bottom - 5)
-                    .style("font-size", "18px") // Increase font size
+                    .attr("y", height + margin.bottom - 5) // Adjust the y value to move the label lower
+                    .style("font-size", "24px") // Increase font size
                     .text("Время");
 
                 // Add Y left axis label
@@ -169,8 +170,8 @@ const DiagramPage = () => {
                     svg.append("text")
                         .attr("class", "y-axis-left-label")
                         .attr("text-anchor", "middle")
-                        .attr("transform", `translate(${-margin.left + 20}, ${height / 2}) rotate(-90)`)
-                        .style("font-size", "18px") // Increase font size
+                        .attr("transform", `translate(${-margin.left + 40}, ${height / 2}) rotate(-90)`)
+                        .style("font-size", "34px") // Increase font size
                         .text("Количество включенных горелок");
                 }
 
@@ -181,14 +182,14 @@ const DiagramPage = () => {
                             .attr("class", "y-axis-right-label")
                             .attr("text-anchor", "middle")
                             .attr("transform", `translate(${width + margin.right - 20}, ${height / 2}) rotate(-90)`)
-                            .style("font-size", "18px") // Increase font size
+                            .style("font-size", "34px") // Increase font size
                             .text("Паропроизводительность, т/час");
                     } else {
                         svg.append("text")
                             .attr("class", "y-axis-left-label")
                             .attr("text-anchor", "middle")
-                            .attr("transform", `translate(${-margin.left + 10}, ${height / 2}) rotate(-90)`)
-                            .style("font-size", "18px") // Increase font size
+                            .attr("transform", `translate(${-margin.left + 25}, ${height / 2}) rotate(-90)`)
+                            .style("font-size", "34px") // Increase font size
                             .text("Паропроизводительность, т/час");
                     }
                 }
@@ -209,7 +210,7 @@ const DiagramPage = () => {
                     legend.append('text')
                         .attr('x', 30)
                         .attr('y', 15)
-                        .style('font-size', '18px') // Increase font size
+                        .style('font-size', '24px') // Increase font size
                         .text('Количество включенных горелок');
                 }
 
@@ -224,7 +225,7 @@ const DiagramPage = () => {
                     legend.append('text')
                         .attr('x', 30)
                         .attr('y', showBurners ? 45 : 15) // Adjust position if both legends are shown
-                        .style('font-size', '18px') // Increase font size
+                        .style('font-size', '24px') // Increase font size
                         .text('Паропроизводительность, т/час');
                 }
 
@@ -299,7 +300,7 @@ const DiagramPage = () => {
 
     return (
         <div>
-            <div style={{ marginLeft: '50px', marginTop: '5px', display: 'flex', alignItems: 'center', fontSize: '18px' }}>
+            <div style={{ marginLeft: '50px', marginTop: '5px', display: 'flex', alignItems: 'center', fontSize: '24px' }}>
                 <div>
                     <label>
                         От:
@@ -309,7 +310,7 @@ const DiagramPage = () => {
                             dateFormat="yyyy-MM-dd HH:mm"
                             showTimeSelect
                             timeFormat="HH:mm"
-                            style={{ fontSize: '18px' }} // Increase font size
+                            style={{ fontSize: '24px' }} // Increase font size
                         />
                     </label>
                     <br />
@@ -321,7 +322,7 @@ const DiagramPage = () => {
                             dateFormat="yyyy-MM-dd HH:mm"
                             showTimeSelect
                             timeFormat="HH:mm"
-                            style={{ fontSize: '18px' }} // Increase font size
+                            style={{ fontSize: '24px' }} // Increase font size
                         />
                     </label>
                 </div>
@@ -331,7 +332,7 @@ const DiagramPage = () => {
                         <input type="checkbox"
                                checked={showBurners}
                                onChange={(e) => setShowBurners(e.target.checked)}
-                               style={{ marginLeft: '10px', fontSize: '18px' }} // Increase font size
+                               style={{ marginLeft: '10px', fontSize: '24px' }} // Increase font size
                         />
                     </label>
                     <br />
@@ -340,11 +341,11 @@ const DiagramPage = () => {
                         <input type="checkbox"
                                checked={showCapacity}
                                onChange={(e) => setShowCapacity(e.target.checked)}
-                               style={{ marginLeft: '10px', fontSize: '18px' }} // Increase font size
+                               style={{ marginLeft: '10px', fontSize: '24px' }} // Increase font size
                         />
                     </label>
                     <br />
-                    <button onClick={downloadImage} style={{ fontSize: '18px' }}>Скачать график в PNG</button>
+                    <button onClick={downloadImage} style={{ fontSize: '24px' }}>Скачать график в PNG</button>
                 </div>
             </div>
             <div style={{ display: 'flex', justifyContent: 'center' }}>

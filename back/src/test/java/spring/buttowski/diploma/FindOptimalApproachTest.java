@@ -49,8 +49,8 @@ class FindOptimalApproachTest {
 
     @Test
     public void findOptimalWindow() {
-        BoilerHouse boilerHouse = boilerHouseRepository.findByName("7 котёл 2022 год DEFAULT").get();
-        for (int border = 2; border <= 200; border++) {
+        BoilerHouse boilerHouse = boilerHouseRepository.findByName("7 котёл 2022 DEFAULT").get();
+        for (int border = 2; border <= 200; border+=10) {
             //Находим все нужные нам значения параметров работы за определённый промежуток времени
             List<RawData> rawDataList = dataRepository.findDataByTimeBetweenAndBoilerHouse(boilerHouse.getMinDate(), boilerHouse.getMaxDate(), boilerHouse);
 
@@ -69,22 +69,19 @@ class FindOptimalApproachTest {
 
     @Test
     public void findOptimalApproximation() {
-        BoilerHouse boilerHouse = boilerHouseRepository.findByName("7 котёл 2022 год DEFAULT").get();
-        int maxGap = 300;
-        int maxDegree = 7;
+        BoilerHouse boilerHouse = boilerHouseRepository.findByName("7 котёл 2022 DEFAULT").get();
+        int maxGap = 500;
+        int maxDegree = 5;
         int minGap = 50;
         int gapStep = 50;
 
-        // Calculate the number of steps for gaps and degrees
         int gapSteps = (maxGap - minGap) / gapStep + 1;
-        int degreeSteps = maxDegree - 2 + 1; // Adjusted to start from degree 2
+        int degreeSteps = maxDegree - 2 + 1;
 
-        // Initialize the table to store implicitGapsCounter values
         int[][] implicitGapsTable = new int[gapSteps][degreeSteps];
 
         for (int gapIndex = 0, gap = minGap; gap <= maxGap; gapIndex++, gap += gapStep) {
-            for (int degree = 2; degree <= maxDegree; degree++) { // Start degree from 2
-                // Find all necessary parameter values over a certain period of time
+            for (int degree = 2; degree <= maxDegree; degree++) {
                 List<RawData> rawDataList = dataRepository.findDataByTimeBetweenAndBoilerHouse(boilerHouse.getMinDate(), boilerHouse.getMaxDate(), boilerHouse);
 
                 for (int start = 0, end = gap; end < rawDataList.size(); start += gap, end += gap) {
@@ -93,18 +90,14 @@ class FindOptimalApproachTest {
                     approximate(rawDataList.subList(start, end), RawData::getTime, RawData::getSteamCapacity, RawData::setSteamCapacity, degree);
                 }
 
-                // Calculate the number of burners on for each moment in time
                 List<Coordinate> coordinates = getBurnersAmountByClusterization(rawDataList, boilerHouse, idealParameters);
 
-                // Count the implicit gaps
                 int implicitGapsCounter = countGaps(coordinates);
 
-                // Store the result in the table
-                implicitGapsTable[gapIndex][degree - 2] = implicitGapsCounter; // Adjust index for degree
+                implicitGapsTable[gapIndex][degree - 2] = implicitGapsCounter;
             }
         }
 
-        // Print the table
         System.out.println("Gap\\Degree");
         System.out.print("     ");
         for (int degree = 2; degree <= maxDegree; degree++) {
@@ -115,7 +108,7 @@ class FindOptimalApproachTest {
         for (int gapIndex = 0, gap = minGap; gap <= maxGap; gapIndex++, gap += gapStep) {
             System.out.printf("%4d ", gap);
             for (int degree = 2; degree <= maxDegree; degree++) {
-                System.out.printf("%8d", implicitGapsTable[gapIndex][degree - 2]); // Adjust index for degree
+                System.out.printf("%8d", implicitGapsTable[gapIndex][degree - 2]);
             }
             System.out.println();
         }
